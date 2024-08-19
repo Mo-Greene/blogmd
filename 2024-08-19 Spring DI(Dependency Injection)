@@ -1,0 +1,132 @@
+# Spring DI?
+
+이번 사이드 프로젝트(이 블로그)를 만들며 Spring DI에 대해서 개념적으로 정리할 기회가 생겼다.
+
+예제코드를 보자
+
+```java
+// JWT 토큰 관련 코드
+@Slf4j
+@Component
+public class JwtProvider{
+    private final Key key;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    public JwtProvider(final RefreshTokenRepository refreshTokenRepository,
+			@Value("${jwt.secret-key}") String secretKey) {
+	this.refreshTokenRepository = refreshTokenRepository;
+	byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+	this.key = Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    ...
+}
+
+```
+
+흔히 블로그나 인터넷 강의에서 돌아다니는 JwtProvider다.  
+
+JwtProvider는 JWT에 관련된 모든 기능을 구현하고 있는 클래스다.
+
+<code><strong>JWT 토큰 생성</strong></code>, <code><strong>JWT 토큰 검증</strong></code>, <code><strong>JWT 토큰 권한 체크</strong></code> 등등.. 해야할 역할이 꽤나 많아서 하나의 클래스파일에 여러 역할을 가진 뚱뚱한 컴포넌트가 되어 있었다.
+
+이런 부분은 역할에 맞춰 분리하는게 맞다고 생각해
+<strong>JwtGenerator</strong> 와 <strong>JwtParser</strong> 클래스만들어 각각의 역할에 맞게 JwtProvider의 코드들을 분리해주었다.
+
+
+![](https://cdn.mo-greene.pro/board/d22c9098-9c57-4222-9af9-5405bbb570eb)
+![](https://cdn.mo-greene.pro/board/48af2fbc-88ac-4289-9385-32499b506b17)
+
+이 두개의 클래스는 JWT 토큰을 각각의 역할에 맞춰 분리한 상태이고 이렇게 되니 조금 불편한 부분이 생겼다.
+
+보시다시피 2개의 Bean에서 각기 생성자 주입된
+```java
+public JwtParser(@Value("${jwt.secret-key}") String secretKey) {
+	byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+	this.key = Keys.hmacShaKeyFor(keyBytes);
+}
+
+public JwtGenerator(final RefreshTokenRepository refreshTokenRepository,
+                  	@Value("${jwt.secret-key}") String secretKey) {
+	this.refreshTokenRepository = refreshTokenRepository;
+	byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+	this.key = Keys.hmacShaKeyFor(keyBytes);
+}
+```
+
+<strong>Key</strong> 가 중복으로 불리고 있다고 생각했다.
+
+만약 요구사항이 변경되어<strong>(현재의 요구사항에선 없을 가능성이 높지만!)</strong> 
+
+ hmacShaKey가 아닌 다른 방식의 키값을 사용하게 된다면? 
+
+Key를 사용하는 클래스가 많아진다면?
+
+<br>
+
+하나하나 클래스에서 key를 주입받은 곳을 확인하여 고치고 동작이 확인하는지 테스트 해봐야한다.  
+
+토비의 스프링을 본다면 첫번째 장에서 저자가 말한 아주 인상깊은 말이 생각난다. 
+ 
+<code>개발팀에서 바로 쫓겨나지 않을까 싶을 만큼 한심한 코드다.</code>
+
+### 자 그럼
+
+이 상황에서 Java언어 기반으로 만들어진 Spring과 SpringBoot 프레임워크는 어떻게 해결하길 추천할까.
+
+먼저 해당 Key값을 분리하여 따로 관리하도록 하자
+
+```java
+@Configuration
+public class JwtConfig {
+
+    @Value("${jwt.secret-key}")
+    private String secretKey;
+
+    @Bean
+    public SecretKey jwtSecretKey() {
+    	return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+    }
+}
+```
+
+그렇가면 원래 코드는 어떻게 변했을까?
+
+```java
+
+@Component
+@RequiredArgsConstructor
+public class JwtGenerator {
+
+    private final SecretKey key;
+    ...
+}
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class JwtParser {
+
+    private final SecretKey key;
+    ...
+
+}
+```
+
+이 코드와 아까전의 코드의 차이점은 뭘까?  
+내 생각엔
+
+1. SecretKey의 생성과정이 변한다 하더라도 동일한 상태를 각각의 Bean에 넘겨줄 수 있다.
+2. 중복 코드를 줄여준다.
+
+이 두가지가 되지 않을까?
+
+<hr>
+
+## 마무리
+
+이번 JwtProvider 클래스를 한번 리펙토링해보면서, DI에 대해서 이해하게 되었다.  
+
+이 코드는 내가 내 스스로 말하기 부끄러울 수 있지만 각 객체간의 결합도를 낮추고, 조금더 재사용 가능한 구조로 바꾸었지 않았나 싶다.
+
+흔히 돌아다니는 예제 코드로 이해하기 보다 직접 구현하는 과정에서 구현하니 조금 더 기초를 다지게 된 것 같기도..
