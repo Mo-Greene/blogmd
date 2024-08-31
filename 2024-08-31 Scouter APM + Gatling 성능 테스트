@@ -1,0 +1,406 @@
+## Application Performance Management or Monitoring
+
+<br>
+
+애플리케이션의 성능을 모니터링 하고 관리하는 도구이다.
+
+내가 만든 API를 테스트 할 때 I/O가 많거나 외부 API를 사용할 때 비즈니스 로직의 응답 시간이 증가하는 경우가 있다.
+
+그럴 때마다 난 이 문제의 해결 방안을 <code><strong>"추측을 통한 해결"</strong></code> 혹은 <code><strong>"난 SI에 다니기 때문에 모른 척(!)"</strong></code>해가며 넘기는 일이 대부분이었다.
+
+![](https://cdn.mo-greene.pro/board/8f5dacbf-6e65-45eb-96a5-bd17157f459a)
+
+
+오히려 개발자라면 해결해야 되는 부분에 대해서 외면하고 있었고 
+
+<strong>개발에 '개'자도 알지 못하면서 참견하기 바쁜 멍청한 대표</strong>는 그저 화면이 정상적으로 동작하니 잘 했다고 시끄럽게 떠들어 댈 때마다 속으론 '아.. <code><strong>물경력</strong></code>이 되어가는 구나..' 싶었다.
+
+<br>
+
+> 최소한 개발자라면 당연히 해결해야 하는 문제에 대해서 넘어가려 하지 말자
+
+<br>
+
+다시 돌아와서..
+
+애플리케이션의 성능을 테스트하는 도구는 많은 것들이 있다.
+
+그 중 네이버가 만든 핀포인트도 대표적인 오픈소스 APM이지만 여러가지 조사를 해본 결과
+
+실시간 모니터링 기능이 강력하고
+참고할 자료가 많으며(책, 인강)
+가볍게 내가 만든 사이드프로젝트의 성능을 테스트하기에는 
+
+Scouter APM이 적당하다고 생각했다.
+
+Scouter 의 jdk 버전과 초기 설정때문에 방황하느라 제대로 테스트하기 까지 매우 오래 걸렸기에
+Scouter의 동작과 Gatling으로 간단한 부하 테스트 과정을 적어보려한다.
+
+<br>
+
+---
+
+## Scouter 구성
+
+[Scouter Document KR Github](https://github.com/scouter-project/scouter/blob/master/scouter.document/main/Quick-Start_kr.md)
+
+먼저 이 개념을 직접 확인하기 전에는 이해하기 어려웠지만 꼭 알고 넘어가야 하는 부분이다.
+
+- Agent : JVM, Memory 등등 Java와 Host의 성능정보를 Server로 전달
+- Server : Agent에서 전달받은 데이터의 수집/처리
+- Client : Server의 데이터들을 확인하기 위한 프로그램
+
+
+![](https://cdn.mo-greene.pro/board/c2ed5ad1-f44d-417e-a099-df75e8c45e15)
+
+
+즉, Agent는 실제로 동작하는 서버 코드 tomcat에 같이 실행시키면 사용자에게서 네트워크 요청이 들어올 때의 JVM의 처리 과정들이 Server에 쌓이고 그걸 Client를 통해 직접 모니터링 할 수 있게 된다.
+
+이 개념이 그림과 설명으로 단번에 이해하기엔 쉽지 않았다.
+그리고 샘플로 준 demo 가 오래된 버전이라 실행을 확인하기 어려운 부분이 있었다.
+
+---
+
+## Scouter 실행
+
+먼저 [Scouter Release 버전](https://github.com/scouter-project/scouter/releases) 에서 Scouter-all-x.y.z.tar.gz 와 OS에 맞는 client를 다운받자(window에서도 tar.gz 를 압축해제 할 수 있었다. 처음 알았다..)
+
+![](https://cdn.mo-greene.pro/board/df87a2cd-1292-406b-9c69-f74255923342)
+
+다운받은 scouter 파일들
+
+![](https://cdn.mo-greene.pro/board/353cfa8d-8241-4e13-8037-dfd8d0adbc61)
+
+
+</br>
+
+<hr>
+
+### 수집 서버
+
+가장 먼저 수집서버를 실행시켜서 제대로 동작하는지 확인해보자
+
+scouter > server 를 들어가보자
+
+![](https://cdn.mo-greene.pro/board/03ef1f60-8752-4bbf-bc8a-4e27bd220e4c)
+
+
+<strong>*참고로 startup.bat 혹은 startup.sh 를 실행할 때 로컬 서버의 jdk가 8, 11버전 보다 높을 경우 무조건 에러가 날 텐데 startup 을 jdk8 버전으로 동작시키면 된다.*</strong>
+
+![](https://cdn.mo-greene.pro/board/039ac72f-6e11-4e40-9d30-4e51e7d7464a)
+
+내 로컬에 있는 jdk8 버전으로 실행시키게 수정해주면 제대로 동작하게 된다.
+
+![](https://cdn.mo-greene.pro/board/9a929871-9548-41a0-a2b7-a4bdda3bb39b)
+
+이렇게 started가 되면 수집서버는 동작하게 된다.
+
+그럼 client를 통해 확인해보자
+
+scouter.client > scouter.exe
+
+![](https://cdn.mo-greene.pro/board/429080de-388e-474d-a421-3e2c7138a938)
+
+id와 pw는 둘다 admin
+
+*만약 server가 제대로 올라가지 않았다면 해당 부분에서 Connected fail이 나온다.*
+
+![](https://cdn.mo-greene.pro/board/4d553f41-2534-4743-80a4-07fdaa3a7beb)
+
+난 개인적으로 살짝 투박해 보이는 이런 화면이 "나는 개발자요" 하는 진짜 멋이라고 생각한다.
+
+<code>카페에서 그냥 코딩화면 슬쩍 보여주는 것보다 이렇게 보여주는게 진짜 간지..(허세에 미친 나)</code>
+
+<br>
+
+<hr>
+
+### agent + tomcat 실행
+
+scouter > agent.java
+
+![](https://cdn.mo-greene.pro/board/39d506e0-33a8-4f08-868c-2f293b1aa914)
+
+그럼 scouter.agent.jar를 모니터링하려는 내 사이드프로젝트에 옮겨주자
+
+![](https://cdn.mo-greene.pro/board/e48fe63a-13d9-4c57-ba8b-bcc7c964039a)
+
+(conf와 dump는 한번 실행하게 되면 저절로 생기는 것들이다.)
+
+그 후 scouter.sh를 만들어 해당 명령어를 만들어주자
+
+```shell
+java -javaagent:scouter/scouter.agent.jar -jar build/libs/*.jar
+```
+
+-javaagent는 JVM에서 실행되는 코드를 모니터링하는 도구로 scouter.agent.jar를 사용하겠다는 명령어가 된다.
+
+이렇게 한 후
+./gradlew build를 실행해 최신화 된 jar파일을 만들어 주고 scouter.sh를 실행해보면
+
+![](https://cdn.mo-greene.pro/board/98a38d76-062d-401d-a7b8-f529415dd6f7)
+
+이렇게 scouter가 먼저 실행되고 springboot가 실행되는 것이 확인된다.
+그럼 해당 화면이 scouter.client에는 어떻게 보이게 될까
+
+![](https://cdn.mo-greene.pro/board/331140f7-4109-4f5e-bb84-3a1a82338f18)
+
+
+사진엔 잘 안보이지만 프론트화면 (react 혹은 thymeleaf)에서 요청이 들어올 때마다 xLog에 요청 값들이 들어오게 된다!
+
+이로써 scouter의 tomcat 모니터링을 할 수 있게 되었다.
+
+자 그럼 성능을 테스트해보겠다고 혼자서 백번천번 새로고침 누르며 부하테스트를 줘야할까?
+
+<br>
+
+<hr>
+
+## Gatling
+
+Gatling 은 JMeter 보다 성능이 좋고 더 적은 리소스로 많은 부하를 줄 수 있다고 한다.
+
+JMeter 도 한번 사용해봤지만 이왕이면 새로운 걸 사용해보고 싶어 Gatling으로 테스트를 진행해보았다.
+
+[Gatling.io](https://gatling.io/)
+
+![](https://cdn.mo-greene.pro/board/b4647869-9626-4bf0-a453-e2c7a535b30c)
+
+해당 페이지로 들어가면 Gatling Enterprise가 아닌 조금 아래에 로컬로 돌릴 수 있는 gatling을 받을 수 있다.
+
+그리고 gatling을 받게 되면 maven이 기본으로 다운로드 받을 텐데 만약 gradle 빌드버전을 받고 싶다면
+
+https://docs.gatling.io/reference/install/oss/ 해당 문서 아랫부분의
+
+![](https://cdn.mo-greene.pro/board/e026f370-3f43-4ef3-b86f-d733e0f3ba3e)
+
+gradle을 받으면 된다.
+
+<br>
+
+
+<hr>
+
+### Gatling Setting
+
+https://docs.gatling.io/tutorials/scripting-intro/ 해당 문서를 살펴보면 Gatling을 돌리기에 알맞은 환경설정을 추천해준다.
+
+![](https://cdn.mo-greene.pro/board/9085d39d-cd20-47b8-b824-50891d18d5b6)
+
+![](https://cdn.mo-greene.pro/board/1c65f200-5345-41c4-94dc-32d0dbaa241a)
+
+
+Azul Jdk와 IntelliJ Community 를 추천한다.
+
+
+만약 다운을 받고 jdk와 ide를 세팅하고 나면 해당 파일에 test simulation이 하나가 있다.
+심심풀이로 돌려보시고
+
+> 인제 드디어 내가 만든 애플리케이션의 부하테스트를 진행해보자.
+
+<br>
+
+<hr>
+
+### 테스트 HAR 작성
+
+먼저 테스트 해보려는 화면의 검사(f12)에 들어간다.
+
+![](https://cdn.mo-greene.pro/board/2fe9d5aa-eb7a-49e5-88b2-8c113b6489f1)
+
+다양한 요청 혹은 테스트하길 원하는 요청들을 진행해보고 난 후 네트워크의 요청 내용들 중 하나를 우클릭하고 모든 요청을 HAR로 저장 한 다음
+
+![](https://cdn.mo-greene.pro/board/dc2a2f7d-6652-475c-89ad-65bb74fe73c7)
+
+원하는 폴더에 저장해주도록 하자
+
+<br>
+
+<hr>
+
+### Gatling Recorder
+
+다운받은 Gatling을 Community로 실행해보자
+그리고 terminal에서 <code>./gradlew.bat gatlingRecorder</code> 를 실행해 보면
+
+![](https://cdn.mo-greene.pro/board/907b36d9-4ce4-44f1-9a47-dbc1b4af6d6a)
+
+해당 화면을 볼 수 있다.
+
+아까 전의 HAR 파일로 테스트해보기 위해
+
+![](https://cdn.mo-greene.pro/board/c261229a-040c-48e5-8b4d-e5b91b6eb48a)
+
+이렇게 설정을 맞추었다.
+
+중요한 점은 Simulation Information 의 Infer HTML resources의 체크는 해제해야 된다.
+안 그러면 정적인 리소스들을 자동으로 계속 받게 된다.
+
+그리고 우측 하단의 Save를 누르면
+
+Output으로 설정한 Simulation folder에 ClassName으로 설정한 파일이 하나 생기게 된다.
+
+<br>
+
+<hr>
+
+### Gatling Simulation And Run
+
+해당 파일로 들어가보면 기본적인 테스트들이 만들어져 있다.
+프론트에서 리소스 요청과 관계된 코드들을 전부 삭제해 주자.
+
+나의 경우 중복된 요청들을 제외하고
+
+```java
+import io.gatling.javaapi.core.ScenarioBuilder;  
+import io.gatling.javaapi.core.Simulation;  
+import io.gatling.javaapi.http.HttpProtocolBuilder;  
+  
+import java.time.Duration;  
+import java.util.Map;  
+  
+import static io.gatling.javaapi.core.CoreDsl.*;  
+import static io.gatling.javaapi.http.HttpDsl.http;  
+  
+public class RecordedSimulation extends Simulation {  
+  
+    private HttpProtocolBuilder httpProtocol = http  
+       .baseUrl("https://cdn.mo-greene.pro")  
+       .disableFollowRedirect()  
+       .disableAutoReferer()  
+       .userAgentHeader("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");  
+  
+    private Map<CharSequence, String> headers_0 = Map.ofEntries(  
+       Map.entry("Accept", "*/*"),  
+       Map.entry("Accept-Encoding", "gzip, deflate, br, zstd"),  
+       Map.entry("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"),  
+       Map.entry("Access-Control-Request-Headers", "access-control-allow-origin,cache-control,x-requested-with"),  
+       Map.entry("Access-Control-Request-Method", "GET"),  
+       Map.entry("Origin", "http://localhost:5173"),  
+       Map.entry("Referer", "http://localhost:5173/"),  
+       Map.entry("Sec-Fetch-Dest", "empty"),  
+       Map.entry("Sec-Fetch-Mode", "cors"),  
+       Map.entry("Sec-Fetch-Site", "same-site")  
+    );  
+  
+    private Map<CharSequence, String> headers_1 = Map.ofEntries(  
+       Map.entry("Accept", "application/json"),  
+       Map.entry("Accept-Encoding", "gzip, deflate, br, zstd"),  
+       Map.entry("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"),  
+       Map.entry("Access-Control-Allow-Origin", "*"),  
+       Map.entry("Cache-Control", "no-cache"),  
+       Map.entry("Origin", "http://localhost:5173"),  
+       Map.entry("Referer", "http://localhost:5173/"),  
+       Map.entry("Sec-Fetch-Dest", "empty"),  
+       Map.entry("Sec-Fetch-Mode", "cors"),  
+       Map.entry("Sec-Fetch-Site", "same-site"),  
+       Map.entry("sec-ch-ua", "Chromium\";v=\"128\", \"Not;A=Brand\";v=\"24\", \"Google Chrome\";v=\"128"),  
+       Map.entry("sec-ch-ua-mobile", "?0"),  
+       Map.entry("sec-ch-ua-platform", "Windows"),  
+       Map.entry("x-Requested-With", "XMLHttpRequest")  
+    );  
+  
+    private String uri1 = "http://localhost:8080/v1/blogs";  
+  
+    private ScenarioBuilder scn = scenario("RecordedSimulation")  
+       .exec(  
+          http("request_0")  
+             .options(uri1 + "/50")  
+             .headers(headers_0),  
+          http("request_1")  
+             .get(uri1 + "/50")  
+             .headers(headers_1),  
+          pause(4),  
+          http("request_2")  
+             .get(uri1 + "/latest")  
+             .headers(headers_1),  
+          http("request_3")  
+             .options(uri1 + "?title=&tagId=")  
+             .headers(headers_0),  
+          http("request_4")  
+             .get(uri1 + "?title=&tagId=")  
+             .headers(headers_1),  
+          http("request_22")  
+             .options(uri1 + "?title=test&tagId=")  
+             .headers(headers_0),  
+          http("request_23")  
+             .get(uri1 + "?title=test&tagId=")  
+             .headers(headers_1),  
+          http("request_24")  
+             .get(uri1 + "?title=&tagId=")  
+             .headers(headers_1),  
+          http("request_25")  
+             .options(uri1 + "?title=%ED%85%8C%EC%8A%A4%ED%8A%B8&tagId=")  
+             .headers(headers_0),  
+          http("request_26")  
+             .get(uri1 + "?title=%ED%85%8C%EC%8A%A4%ED%8A%B8&tagId=")  
+             .headers(headers_1)  
+       );  
+  
+  {  
+    setUp(  
+        scn.injectOpen(  
+            constantUsersPerSec(3).during(Duration.ofSeconds(60))  
+        )  
+    ).protocols(httpProtocol);  
+  }  
+}
+```
+
+해당 테스트 시뮬레이션을 만들었다.
+
+>### si 1
+>사용자 : 3명
+>
+>부하 시간 : 60초
+
+이제 테스트 해보자 실행은 간단하다 terminal에서
+
+<code><strong>./gradlew.bat gatlingRun</strong></code> 으로 부하테스트를 진행행해보자
+
+<br>
+
+<hr>
+
+### Gatling 결과 및 분석
+
+![](https://cdn.mo-greene.pro/board/71af4dc6-21a1-40f2-ac71-a1e97dbd7e59)
+
+![](https://cdn.mo-greene.pro/board/fd1b5bcd-0dfb-456b-a81f-bd805fd6f978)
+
+![](https://cdn.mo-greene.pro/board/d45e3db4-aef3-4d36-a547-5e79f1a30e37)
+
+총 1800개의 요청이 테스트에서 실행되었고 모든 요청이 성공적으로 처리되었다.
+
+뭔가 이상한 점이 있다면 1200ms(1.2초)를 넘는 요청이 180개나 쌓여있다. 그리고 scouter 의 화면을 보면 5초나 걸리는 요청들이 깔려있다.
+
+과연 무슨 요청일까?
+
+![](https://cdn.mo-greene.pro/board/4abe0129-34ea-4a1c-965d-f36e11e4ec00)
+
+![](https://cdn.mo-greene.pro/board/9c29caa4-987c-4085-97d1-579754e3d4d0)
+
+해당하는 요청들만 따로 모아서 보았다. 
+
+<strong>*scouter config 옵션 추가로 메서드 실행내역 까지 조회가능*</strong>
+
+5000ms 가 걸리는 요청은
+Get : /blogs/latest
+아무래도 db 커넥이 이루어지기 전에 나오는 것 같다.
+해당하는 메서드를 살펴보자면
+
+![[Pasted image 20240901001903.png]]
+
+특별히 scouter를 테스트해보기 위해 5초의 지연을 추가하였고 모니터링을 통해 알 수 있게 되었다.
+
+<br>
+
+이제 본격적으로 성능테스트를 진행하고 개선을 진행해보자.
+
+<br>
+
+<hr>
+
+## 참고
+
+자바 트러블슈팅 - 이상민
