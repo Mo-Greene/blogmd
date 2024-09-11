@@ -1,0 +1,117 @@
+### Scouter APM 복습
+
+로컬서버에서의 테스트를 넘어 실서버에서 Scouter APM을 적용해보려 한다.
+
+다시 Scouter APM의 구조를 되새겨보자면
+
+![](https://cdn.mo-greene.pro/board/3d91c1d0-f95b-47d3-adef-a6659e7539c6)
+
+실시간으로 운영되는 서비스(Tomcat)을 조회하기 위해 agent.java 와
+
+운영되는 OS(Ubuntu 24.04)를 조회하기 위해 agent.host 를 심어놓는다.
+
+Collector 서버의 경우 로컬로 돌리지 않고 수집서버용으로 ec2를 하나 더 추가했다.
+
+자 그럼 이제 운용되는 서버들을 간단히 봐보자면
+
+<br>
+
+> agent 서버
+
+![](https://cdn.mo-greene.pro/board/d2d4d6e3-e8f3-4443-92f4-a43e68f18465)
+
+app 디렉터리 내부에는 java 실행 jar가 있다.
+
+![](https://cdn.mo-greene.pro/board/7af80f42-07d5-45ff-a214-10a99cd89f7f)
+
+이렇게 실제 운용 되는 agent서버는 agent.host와 agent.java를 심어둔 서버가 실행되고 있다.
+
+실서버
+[mo-greene.pro](https://mo-greene.pro)
+
+<br>
+
+> Collector 서버
+
+수집 서버의 경우 aws에 새로운 ec2를 만들어 올려두었다.
+
+![](https://cdn.mo-greene.pro/board/d3b08b54-15e7-407d-9199-bbd01bdfae2a)
+
+이후 client에서 Collector서버에 접근하려 한다면 당연히!
+
+<code>에러가 나온다..</code>
+
+![](https://cdn.mo-greene.pro/board/2b9b93cb-ec38-46b3-b101-127ffba49c19)
+
+이유는 간단하다.
+
+수집서버에서 방화벽 포트를 추가하지 않았기 때문이기에  
+포트를 허용해주도록 하자
+
+접속 성공시
+
+![](https://cdn.mo-greene.pro/board/b904b2ee-e68a-45c5-9c2e-faec76e364c0)
+
+이렇게 내가 보고 싶었던 화면이 나오게 된다.
+
+<br>
+xLog의 화면에서 일정한 간격으로 두 개의 요청이 보이는데 이건
+
+![](https://cdn.mo-greene.pro/board/a6ea7700-4393-4380-8249-aa537e041cda)
+
+![](https://cdn.mo-greene.pro/board/51099a75-4610-4f41-825f-30a6703b775b)
+
+로드밸런서로 설정한 health check 다.
+
+중요한 요청은 아니니 넘어가고 이제 각 agent와 수집서버의 간략한 설정을 해보자.
+
+<br>
+<hr>
+
+### Scouter Configure
+
+
+> agent.java configure
+
+![](https://cdn.mo-greene.pro/board/2487ee76-12a3-4de5-ad52-6373570fcd76)
+
+- <code><strong>net_collector_ip</strong></code>
+	요청을 보낼 수집서버 ip를 적어준다.
+
+
+- <code><strong>net_collector_udp_port, net_collect_tcp_port</strong></code>
+	수집서버와 연결할 포트
+
+<code>net_collector 의 ip와 port의 경우 수집서버의 방화벽과 포트를 열어주어야 한다.</code>
+
+- <code><strong>hook_method_patterns</strong></code>
+	해당 패키지 내의 하위 클래스의 모든 method 를 profiling 하기 위한 설정
+
+
+- <code><strong>xlog_lower_bound_time_ms</strong></code>
+	0.3초 이하의 응답속도는 프로파일링 할 필요가 없다.
+	하지만 exception 이 발생하거나 오류사항은 프로파일링으로 남는다.
+	사진에선 응답을 확인하기 위해 aws 의 health check 요청만 무시하자
+
+<br>
+<br>
+
+> agent.host configure
+
+![](https://cdn.mo-greene.pro/board/270f8321-6c72-421d-9577-1f09cc059512)
+
+해당 설정도 주석처리 되어있는 설정들을 열어주었다.
+
+host의 profiling을 위해 수집서버의 ip 와 port 를 설정하자.
+
+<br>
+
+<strong>요청 확인</strong>
+
+실서버에서 아무 화면이나 붙잡고 새로고침을 연타했을시
+
+![](https://cdn.mo-greene.pro/board/e827ae6e-f4db-4288-b8bd-8f986e9d7f9f)
+
+![](https://cdn.mo-greene.pro/board/e3eb8bf7-8f0d-41bc-bba6-9e7da7bab381)
+
+위와 같이 테스트 했던 요청들이 화면에 나오며 프로파일링 할 수 있는 환경이 만들어진다.
