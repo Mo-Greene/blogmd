@@ -1,0 +1,147 @@
+Kotlin Github Test
+자바와 코틀린의 차이
+자바에는 있지만 코틀린에는 없는 기능
+
+Checked Exception
+
+자바의 예외 계층
+Throwable : 예외 계층의 최상층 클래스
+Error : 시스템에 비정상적인 상황으로 발생
+ex) OutOfMemoryError(OOME), StackOverflowError 등
+Exception : 시스템에서 포착가능하여 복구가능, 예외처리 강제!
+IOException, FileNotFoundException 등
+@Transactional 에서 기본적으로 롤백이 동작하지 않음
+RuntimeException : 런타임시에 발생하는 예외. 예외 처리를 강제 하지않음
+자바에서는 CheckedException은 컴파일 에러가 발생하기 때문에 강제적으로 try-catch 로 감싸거나 throws 예외를 전파해야했음
+try {
+    Thread.sleep(1);
+} catch (InterruptedException e) {
+    //Do nothing !! <- 요런 문제들
+}
+위의 예제와 같이 CheckedException에 의미 없는 처리(단순한 로깅 등)를 반복한다.
+사실 CheckedException이 발생할 경우 catch안에서 에러를 해결하는 일은 흔하지 않으며 생산성을 감소한다.
+코틀린은 CheckedException을 강제하지 않는다.
+Thread.sleep(1)
+try {
+    Thread.sleep(1)
+} catch (e: Exception) {
+    //Do!
+}
+원하는 경우에도 try-catch 를 사용할 수 있다.
+
+자료형
+
+자바는 primitive 자료형을 지원하며 객체로 된 레퍼런스 타입도 지원
+int i = 0;
+Integer ii = 0;
+String str = ii.toString();
+코틀린은 레퍼런스 타입만 지원한다.
+val i: Int = 0
+var str: String = i.toString()
+//컴파일 될 때 => 최적화 된 방식으로 컴파일이 됨
+int i = 0;
+String str = String.valueOf(i);
+
+Static
+
+자바는 static 키워드로 정적 선언을 한다.
+public class JavaClass {
+static int i = 0;
+
+public static void staticMethod() {
+    //...
+}
+
+}
+코틀린은 companion object로 대체
+class KotlinClass {
+companion object {
+    val i: Int = 0
+
+    //유틸리티 메서드를 해당 방식으로 구현한다
+    fun function() {
+        //...
+    }
+}
+
+}
+
+삼항연산자
+
+자바는 삼항연산자를 사용
+String tag = "장현석".equals(name) ? "맞다" : "아니다"; 
+코틀린은 if-else로 대신한다.
+val tag: String = if ("장현석" == parameterName) "맞다" else "아니다"
+기존 자바에서는 if-else 를 통해 직접적으로 값을 리턴하지 못했는데 코틀린에서는 가능하다는게 좀 신기
+
+세미콜론
+
+자바에서 라인의 마지막은 무조건 세미콜론
+Boolean isMan = false;
+코틀린은 필수가 아니다. (사용해도 상관은 없음)
+val isAdmin: Boolean = false
+코틀린에는 있지만 자바에는 없는 기능
+
+확장
+
+개발자가 임의로 객체의 함수나 프로퍼티를 확장해서 사용할 수 있다.(이 개념이 상당히 흥미로웠다.)
+fun String.first(): Char {
+    return this[0]
+}
+fun String.addFirst(char: Char) {
+    return char + this.substring(0)
+}
+fun main() {
+    println("ABCD".first()) // 출력 : A
+    println("ABCD".addFirst('Z')) // 출력 : ZABCD
+}
+String 객체에 원하는 기능을 추가 삽입한 코드원래라면 유틸성 함수로 만들어주고 해당 기능을 불러와서 사용하지 않았나 싶다.
+
+데이터 클래스
+
+데이터를 보관하거나 전달하는 목적을 가진 불변 객체를 사용. ex) DTO
+data class Person(val name: String, val age: Int)
+//hashCode(), equals(), toString() 자동생성
+기존 자바 Lombok 사용
+@Data
+public class Person {
+    private String name;
+    private int age;
+}
+물론 자바에서도 jdk 14버전? 이후로는 record 클래스가 추가 되어서 비슷하게 사용할 수 있다.
+
+문자열 템플릿
+
+문자열에 변수를 사용하거나 여러 행으로 된 텍스트 블록을 만들 수 있다.
+val text = "World"
+val hello = "Hello, ${text}"
+println(hello) // Hello, World
+문자열 템플릿 기반의 동적 쿼리
+fun sql(nameIncluded: Boolean) =
+    """
+        SELECT id, name
+        FROM users
+        WHERE id = :id
+        ${
+            if (nameIncluded) {
+                """
+                AND name = :name
+                """
+            } else ""
+        }
+    """
+JPA에서 네이티브 쿼리를 사용할때 자주 사용될 것 같은 느낌
+
+Null 안정성
+
+자바에서 가장 많이 발생하는 NullPointerException 예방
+jdk 8 이후로 Optional이 등장함
+-> 하지만 값을 래핑하기 때문에 객체 생성에 따른 추가적인 오버헤드가 발생하고, 컴파일 단계에서는 Null 가능성을 검사하지 않음!
+val a : String = null //컴파일 오류
+var b : String = "abc"
+b = null //컴파일 오류
+Nullable 참조는 Null 안정성을 제공한다.
+var a : String? = null
+a.length //컴파일 오류
+a?.length //정상
+a!!.length //Null이 아니라고 확신하는 경우, 만약 var a 의 결과로는 에러가 나게 됨
