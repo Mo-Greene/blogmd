@@ -1,0 +1,100 @@
+전체 작업 순서 요약
+
+로컬에서 Dockerfile을 작성하고 도커 이미지를 생성 (docker save)
+Jenkins를 사용해 이미지를 원격 서버로 전송 (sshPublisher)
+원격 서버에서 .sh 스크립트를 실행하여:
+기존 컨테이너/이미지 삭제
+새로운 이미지 로드 (docker load)
+새 컨테이너 실행
+
+
+
+
+
+
+1. 도커 설치 방법
+
+Ubuntu: 도커 설치 가이드
+CentOS: 도커 설치 가이드
+
+
+2. 도커 설치 후 작업
+
+Dockerfile 작성
+프로젝트 root 폴더에 프로젝트 설정에 맞는 Dockerfile 작성
+
+
+Jenkins 서버에도 도커 설치 필요
+Jenkins가 Docker 명령어를 실행하기 위해 도커 설치 필수
+
+
+
+
+3. Jenkins를 이용한 Docker 배포 및 실행
+(1) Jenkinsfile 작성 방법
+1. Docker 이미지 생성 및 저장
+
+docker save 명령어를 사용해 도커 이미지를 .tar 파일로 저장
+예시: docker save myimage:latest
+추가 설정: docker save 명령어 참조
+
+
+
+2. Docker 이미지 전송
+
+Jenkins의 sshPublisher 플러그인을 활용하여 .tar 파일을 원격 서버로 전송
+
+3. 전송 후 원격 서버에서 실행 스크립트 실행
+
+Jenkinsfile 예시:
+
+stage('배포 및 실행') { 
+    steps { 
+        sshPublisher(publishers: [ 
+            sshPublisherDesc( 
+                configName: '젠킨스 ssh 설정에 추가한 원격서버', 
+                transfers: [ 
+                    sshTransfer( 
+                        sourceFiles: 'docker image.tar', 
+                        execCommand: ''' 
+                            cd / 
+                            chmod +x [원격서버에서 실행].sh 
+                            ./[원격서버에서 실행].sh 
+                        ''' 
+                    ) 
+                ], 
+                usePromotionTimestamp: false, 
+                verbose: true 
+            ) 
+        ]) 
+    } 
+}
+
+
+(2) 원격 서버에서 실행할 .sh 작성 시 주의사항
+
+스크립트 파일 위치 및 권한 설정
+
+실행할 .sh 파일이 적절한 위치에 있고 실행 권한(chmod +x)이 있어야 함
+
+
+스크립트 실행 순서
+
+실행 중인 Docker 컨테이너 중지 및 삭제
+기존 Docker 이미지 삭제
+.tar 파일을 docker load로 로드
+명령어 예시: docker load < myimage.tar
+추가 설정: docker load 명령어 참조
+
+
+
+
+도커 볼륨 설정
+
+로그 파일 저장 경로를 원격 서버로 설정
+예: 도커 컨테이너의 /logs 디렉터리를 원격 서버의 /logs 디렉터리로 매핑
+
+
+
+
+
